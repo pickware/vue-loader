@@ -11,6 +11,7 @@ import type {
   SFCBlock,
   SFCTemplateCompileOptions,
   SFCScriptCompileOptions,
+  SFCDescriptor,
 } from 'vue/compiler-sfc'
 import { selectBlock } from './select'
 import { genHotReloadCode } from './hotReload'
@@ -59,6 +60,12 @@ export interface VueLoaderOptions {
   experimentalInlineMatchResource?: boolean
 
   isServerBuild?: boolean
+
+  /**
+   * Function to transform the descriptor after it's created by the compiler.
+   * This allows modifying the descriptor before it's processed by the loader.
+   */
+  transformDescriptor?: (descriptor: SFCDescriptor) => SFCDescriptor
 }
 
 let errorEmitted = false
@@ -113,11 +120,16 @@ export default function loader(
 
   const filename = resourcePath.replace(/\?.*$/, '')
 
-  const { descriptor, errors } = parse(source, {
+  const { descriptor: rawDescriptor, errors } = parse(source, {
     filename,
     sourceMap,
     templateParseOptions: options.compilerOptions,
   })
+
+  // Apply descriptor transformation if provided
+  const descriptor = options.transformDescriptor
+    ? options.transformDescriptor(rawDescriptor)
+    : rawDescriptor
 
   const asCustomElement =
     typeof options.customElement === 'boolean'
